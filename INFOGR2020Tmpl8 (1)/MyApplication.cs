@@ -40,7 +40,7 @@ namespace Template
 						bool occluded = false;
 						foreach(Circle p in primitives)
 						{
-							if(Math.Pow(x - p.x, 2) + Math.Pow(y - p.y, 2) > p.r * p.r)
+							if(Math.Pow(ray.O.X - p.x, 2) + Math.Pow(ray.O.Y - p.y, 2) > p.r * p.r)
 							{
 								if(ray.intersection2(p) && !p.Equals(c)) occluded = true;
 								

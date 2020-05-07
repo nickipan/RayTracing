@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
+
 namespace Template
 {
 	class MyApplication
@@ -21,9 +22,8 @@ namespace Template
 			light = new List<Circle>();
 			primitives = new List<Circle>();
 
-			light.Add(new Circle(0, 0.5f, 0.5f, true, new floatColour(1, 1, 1)));
-			primitives.Add(new Circle(0, 0.5f, 0.5f, true, new floatColour(1, 1, 1)));
-			primitives.Add(new Circle(0, -0.5f, 0.1f, true, new floatColour(1, 1, 1)));
+
+			light.Add(new Circle(0, 0, 0.1f, true, new floatColour(1, 1, 1)));
 
 			ray = new Ray();
 			for(int x = 0; x < 640; x++)
@@ -33,6 +33,7 @@ namespace Template
 					floatColour pixelColour = new floatColour(0, 0, 0);
 					foreach(Circle c in light)
 					{
+
 						ray.O = pixelPosition(x, y);
 						ray.D = (new Vector2(c.x - ray.O.X, c.y - ray.O.Y)).Normalized();
 						ray.t = (float)Math.Sqrt(Math.Pow(c.x - ray.O.X, 2) + Math.Pow(c.y - ray.O.Y, 2));
@@ -76,9 +77,13 @@ namespace Template
 
 		floatColour lightAttenuation(float dl) 
 		{
-			float i = 1f/(1f + dl* dl);
+			float i =  Clamp(0.05f/dl, 0f, 1f);
 			return new floatColour(i, i, i);
 		}
+		public static float Clamp(float value, float min, float max)  
+			{  
+				return (value < min) ? min : (value > max) ? max : value;  
+			}
 		
 	}
 
@@ -169,8 +174,8 @@ namespace Template
 			float a = Vector2.Dot(D, D);
 			float b = Vector2.Dot(2 * D, O - new Vector2(p.x, p.y));
 			float c = Vector2.Dot(O - new Vector2(p.x, p.y), new Vector2(p.x, p.y)) - (p.r * p.r);
-			if((b * b - 4 * a * c) < 0)return true;
-			return false;
+			if((b * b - 4 * a * c) < 0)return false;
+			return true;
 		}
 	}
 }

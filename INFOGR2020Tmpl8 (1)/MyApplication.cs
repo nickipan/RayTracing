@@ -19,54 +19,59 @@ namespace Template
 		// initialize
 		public void Init()
 		{
-
+			float[] aax = { 0, 0.5f, 0, 0.5f };
+			float[] aay = { 0, 0, 0.5f, 0.5f };
 
 			light = new List<Circle>();
 			primitives = new List<Circle>();
 
 			primitives.Add(new Circle(0.3f, 0.1f, 0.1f, false, new floatColour(0, 0, 0)));
-			primitives.Add(new Circle(-0.5f, -0.5f, 0.1f, false, new floatColour(1, 1, 1)));
+			primitives.Add(new Circle(-0.3f, -0.5f, 0.1f, false, new floatColour(1, 1, 1)));
 			light.Add(new Circle(0f, 0.5f, 0.25f, true, new floatColour(1, 0, 1)));
 			light.Add(new Circle(-0.3f, 0.2f, 0.25f, true, new floatColour(0, 1, 0)));
 			light.Add(new Circle(0.2f, -0.4f, 0.25f, true, new floatColour(0, 0, 1)));
 
 			ray = new Ray();
-			for(int x = 0; x < 640; x++)
+			for(int x = 0; x < screen.width; x++)
 			{
-				for(int y = 0; y < 400; y++)
+				for(int y = 0; y < screen.height; y++)
 				{
-					floatColour pixelColour = new floatColour(0, 0, 0);
+					floatColour[] pixelColour = { new floatColour(0, 0, 0), new floatColour(0, 0, 0), new floatColour(0, 0, 0), new floatColour(0, 0, 0) };
 					foreach(Circle c in light)
 					{
-						ray.O = pixelPosition(x, y);
-						ray.D = (new Vector2(ray.O.X - c.x, ray.O.Y - c.y)).Normalized();
-						ray.t = (float)Math.Sqrt(Math.Pow(ray.O.X - c.x, 2) + Math.Pow(ray.O.Y - c.y, 2));
+						for(int k = 0; k < 4; k++)
+						{
+							ray.O = pixelPosition(x + aax[k], y + aay[k]);
+							ray.D = (new Vector2(ray.O.X - c.x, ray.O.Y - c.y)).Normalized();
+							ray.t = (float)Math.Sqrt(Math.Pow(ray.O.X - c.x, 2) + Math.Pow(ray.O.Y - c.y, 2));
 
-						bool occluded = false;
-						foreach(Circle p in primitives)
-						{						
-							if ((Math.Pow(ray.O.X - p.x, 2) + Math.Pow(ray.O.Y - p.y, 2)) > (p.r * p.r))
+							bool occluded = false;
+							foreach (Circle p in primitives)
 							{
-								if (ray.intersection(p)) 
-								{ 
+								if ((Math.Pow(ray.O.X - p.x, 2) + Math.Pow(ray.O.Y - p.y, 2)) > (p.r * p.r))
+								{
+									if (ray.intersection(p))
+									{
+										occluded = true;
+										float tmp = (float)Math.Sqrt((Math.Pow(c.x - p.x, 2) + Math.Pow(c.y - p.y, 2)));
+										if (ray.t < tmp && (ray.t > 0 && tmp > 0)) occluded = false;
+										tmp = (float)Math.Sqrt((Math.Pow(ray.O.X - p.x, 2) + Math.Pow(ray.O.Y - p.y, 2)));
+										if (ray.t < tmp) occluded = false;
+									}
+								}
+								else
+								{
 									occluded = true;
-									float tmp = (float)Math.Sqrt((Math.Pow(c.x - p.x, 2) + Math.Pow(c.y - p.y, 2)));
-									if (ray.t < tmp && (ray.t > 0 && tmp > 0)) occluded = false;
-									tmp = (float)Math.Sqrt((Math.Pow(ray.O.X - p.x, 2) + Math.Pow(ray.O.Y - p.y, 2)));
-									if (ray.t < tmp) occluded = false;
 								}
 							}
-							else
+							if (!occluded)
 							{
-								occluded = true;
+								pixelColour[k] += c.colour * lightAttenuation(Vector2.Distance(ray.O, new Vector2(c.x, c.y)), c.r);
 							}
 						}
-						if (!occluded) 
-						{
-							pixelColour += c.colour * lightAttenuation(Vector2.Distance(ray.O, new Vector2(c.x, c.y)), c.r);
-						}
-						screen.Plot(x, y, pixelColour.ToRGB32());
+		
 					}
+					screen.Plot(x, y, ((pixelColour[0] + pixelColour[1] + pixelColour[2] + pixelColour[3]) / 4.0f).ToRGB32());
 				}
 			}
 
@@ -76,10 +81,10 @@ namespace Template
 		{
 
 		}
-		Vector2 pixelPosition(int x, int y)
+		Vector2 pixelPosition(float x, float y)
 		{
-			float TX =  ((float)x/640.0f) * 2.0f - 1.0f;
-			float TY = ((float)y/400.0f) * -2.0f + 1.0f;
+			float TX =  ((float)x/screen.width) * 2.0f - 1.0f;
+			float TY = ((float)y/screen.height) * -2.0f + 1.0f;
 			return new Vector2(TX, TY);
 		}
 
@@ -132,6 +137,11 @@ namespace Template
 		{
 			return new floatColour(c1.r + c2.r, c1.g + c2.g, c1.b + c2.b);
 		}
+
+		public static floatColour operator /(floatColour c1, float n)
+		{
+			return new floatColour(c1.r / n, c1.g / n, c1.b / n);
+		}
 	}
 
 
@@ -152,16 +162,6 @@ namespace Template
 			this.light = light;
 			this.colour = colour;
 		}
-
-		public float CircleArea()
-		{
-			return (float)Math.PI * (r * r);
-		}
-
-        public bool Equals(Circle obj)
-        {
-            return (this.x == obj.x && this.y == obj.y && this.r == obj.r);
-        }
     }
 
 	class Ray
@@ -169,18 +169,6 @@ namespace Template
 		public Vector2 O{get; set;}
 		public Vector2 D{get; set;}
 		public float t{get; set;}
-
-		public bool intersection2(Circle p)
-		{
-			Vector2 c = new Vector2(p.x, p.y) - O;
-			float t = Vector2.Dot(c, D);
-			Vector2 q = c - t * D;
-			float qdot = Vector2.Dot(q, q);
-			if(qdot * qdot > (p.r * p.r)) return false;
-			t -= (float)Math.Sqrt(p.r * p.r - qdot);
-			if((t < this.t) && (t > 0)) this.t = t;
-			return true;
-		}
 
 		public bool intersection(Circle p)
 		{

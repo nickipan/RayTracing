@@ -13,7 +13,8 @@ namespace Template
 		// member variables
 		public Surface screen;
 		List<Circle> light;
-		List<Circle> primitives;
+		List<Circle> circles;
+		List<Square> squares;
 		Ray ray;
 
 		// initialize
@@ -23,13 +24,16 @@ namespace Template
 			float[] aay = { 0, 0, 0.5f, 0.5f };
 
 			light = new List<Circle>();
-			primitives = new List<Circle>();
+			circles = new List<Circle>();
+			squares = new List<Square>();
 
-			primitives.Add(new Circle(0.3f, 0.1f, 0.1f, false, new floatColour(0, 0, 0)));
-			primitives.Add(new Circle(-0.3f, -0.5f, 0.1f, false, new floatColour(1, 1, 1)));
+			circles.Add(new Circle(0.3f, 0.1f, 0.1f, false, new floatColour(0, 0, 0)));
+			circles.Add(new Circle(-0.3f, 0.5f, 0.1f, false, new floatColour(0, 0, 0)));
+			squares.Add(new Square(-0.3f, -0.3f, 0.2f, new floatColour(0, 0, 0)));
 			light.Add(new Circle(0f, 0.5f, 0.25f, true, new floatColour(1, 0, 1)));
-			light.Add(new Circle(-0.3f, 0.2f, 0.25f, true, new floatColour(0, 1, 0)));
+			light.Add(new Circle(-0.2f, 0.2f, 0.25f, true, new floatColour(0, 1, 0)));
 			light.Add(new Circle(0.2f, -0.4f, 0.25f, true, new floatColour(0, 0, 1)));
+
 
 			ray = new Ray();
 			for(int x = 0; x < screen.width; x++)
@@ -46,7 +50,7 @@ namespace Template
 							ray.t = (float)Math.Sqrt(Math.Pow(ray.O.X - c.x, 2) + Math.Pow(ray.O.Y - c.y, 2));
 
 							bool occluded = false;
-							foreach (Circle p in primitives)
+							foreach (Circle p in circles)
 							{
 								if ((Math.Pow(ray.O.X - p.x, 2) + Math.Pow(ray.O.Y - p.y, 2)) > (p.r * p.r))
 								{
@@ -62,12 +66,23 @@ namespace Template
 								else
 								{
 									occluded = true;
+									pixelColour[k] = new floatColour(0, 0, 0);
+								}
+							}
+							foreach (Square p in squares)
+							{
+								if (ray.intersection2(p))
+								{
+									occluded = true;
+									float tmp = (float)Math.Sqrt((Math.Pow(ray.O.X - (p.x + p.s), 2) + Math.Pow(ray.O.Y - (p.y + p.s), 2)));
+									if (ray.t < tmp) occluded = false;
 								}
 							}
 							if (!occluded)
 							{
 								pixelColour[k] += c.colour * lightAttenuation(Vector2.Distance(ray.O, new Vector2(c.x, c.y)), c.r);
 							}
+
 						}
 		
 					}
@@ -164,6 +179,23 @@ namespace Template
 		}
     }
 
+	class Square
+	{
+		public float x { get; }
+		public float y { get; }
+		public float s { get; }
+		public floatColour colour { get; }
+
+		public Square(float x, float y, float s, floatColour colour)
+		{
+			this.x = x;
+			this.y = y;
+			this.s = s;
+			this.colour = colour;
+		}
+
+	}
+
 	class Ray
 	{
 		public Vector2 O{get; set;}
@@ -176,6 +208,30 @@ namespace Template
 			float b = Vector2.Dot(2 * D, O - new Vector2(p.x, p.y));
 			float c = Vector2.Dot(O - new Vector2(p.x, p.y), (O - new Vector2(p.x, p.y))) - (p.r * p.r);
 			if((b * b - 4 * a * c) < 0)return false;
+			return true;
+		}
+
+		public bool intersection2(Square p)
+		{
+			float t1 = (p.x - O.X) / D.X;
+			float t2 = ((p.x + p.s) - O.X) / D.X;
+			float t3 = (p.y - O.Y) / D.Y;
+			float t4 = ((p.y + p.s) - O.Y) / D.Y;
+
+			float tmin = Math.Max(Math.Min(t1, t2), Math.Min(t3, t4));
+			float tmax = Math.Min(Math.Max(t1, t2), Math.Max(t3, t4));
+
+			// if tmax < 0, ray (line) is intersecting AABB, but the whole AABB is behind us
+			if (tmax > 0 && tmax < tmax + tmin)
+			{
+				return false;
+			}
+			// if tmin > tmax, ray doesn't intersect AABB
+			if (tmin > tmax)
+			{
+				return false;
+			}
+
 			return true;
 		}
 	}
